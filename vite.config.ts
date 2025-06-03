@@ -30,7 +30,7 @@ export default defineConfig({
       },
     }),
   ],
-  base: process.env.NODE_ENV === "production" ? "/my-pwa-app/" : "/",
+  base: "/viktis/",
 });
 
 // Orange dots: #D87F32
