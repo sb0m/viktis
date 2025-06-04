@@ -12,10 +12,9 @@ import {
   TimeScale,
   type TooltipItem,
 } from "chart.js";
-import "chartjs-adapter-date-fns"; // You'll need to install this package
+import "chartjs-adapter-date-fns";
 import "./App.css";
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -27,7 +26,6 @@ ChartJS.register(
   TimeScale
 );
 
-// Define the data structure
 interface WeightData {
   date: number;
   weight: number;
@@ -50,7 +48,6 @@ function App() {
   useEffect(() => {
     const baseUrl = import.meta.env.BASE_URL || "/viktis/";
 
-    // Fetch the data from the JSON file with the correct path
     fetch(`${baseUrl}data.json`)
       .then((response) => {
         if (!response.ok) {
@@ -79,11 +76,9 @@ function App() {
           setMinDate(firstDateStr);
           setMaxDate(lastDateStr);
 
-          // Default the date pickers to the first and last dates
           setStartDate(firstDateStr);
           setEndDate(lastDateStr);
         }
-
         setLoading(false);
       })
       .catch((err) => {
@@ -92,25 +87,6 @@ function App() {
         setLoading(false);
       });
   }, []);
-
-  // Format date for input element (YYYY-MM-DD)
-  const formatDateForInput = (date: Date): string => {
-    return date.toISOString().split("T")[0];
-  };
-
-  // Format date for display - with timezone adjustment
-  const formatDateForDisplay = (timestamp: number): string => {
-    // Create date in local timezone
-    const date = new Date(timestamp);
-
-    // Format consistently using toLocaleDateString with explicit options
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      timeZone: "UTC", // Force UTC interpretation to avoid timezone shifts
-    });
-  };
 
   useEffect(() => {
     if (weightData.length === 0) return;
@@ -124,16 +100,29 @@ function App() {
 
     if (endDate) {
       const endTimestamp =
-        new Date(endDate).getTime() + (24 * 60 * 60 * 1000 - 1); // End of the selected day
+        new Date(endDate).getTime() + (24 * 60 * 60 * 1000 - 1);
       filtered = filtered.filter((item) => item.date <= endTimestamp);
     }
 
     setFilteredData(filtered);
   }, [startDate, endDate, weightData]);
 
-  // Handle date range reset
+  const formatDateForInput = (date: Date): string => {
+    return date.toISOString().split("T")[0];
+  };
+
+  const formatDateForDisplay = (timestamp: number): string => {
+    const date = new Date(timestamp);
+
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  };
+
   const resetDateRange = () => {
-    // Reset to the first and last dates in the data
     if (weightData.length > 0) {
       const firstDate = new Date(weightData[0].date);
       const lastDate = new Date(weightData[weightData.length - 1].date);
@@ -146,7 +135,6 @@ function App() {
     }
   };
 
-  // Create dataset for time scale chart
   const createTimeScaleDataset = () => {
     if (filteredData.length === 0) return null;
 
@@ -155,7 +143,7 @@ function App() {
         {
           label: "Weight (kg)",
           data: filteredData.map((item) => ({
-            x: item.date, // Use timestamp directly for time scale
+            x: item.date,
             y: item.weight,
           })),
           fill: false,
@@ -171,7 +159,6 @@ function App() {
 
   const chartData = createTimeScaleDataset();
 
-  // Calculate y-axis min and max based on filtered data
   const calculateYAxisRange = () => {
     if (filteredData.length === 0) {
       return { min: undefined, max: undefined };
@@ -180,10 +167,8 @@ function App() {
     const weights = filteredData.map((item) => item.weight);
     const minWeight = Math.min(...weights);
     const maxWeight = Math.max(...weights);
-
-    // Calculate a reasonable range that shows the data well
     const range = maxWeight - minWeight;
-    const padding = Math.max(0.5, range * 0.1); // At least 0.5kg or 10% of range
+    const padding = Math.max(0.5, range * 0.1);
 
     return {
       min: Math.floor(minWeight - padding),
@@ -193,13 +178,12 @@ function App() {
 
   const yAxisRange = calculateYAxisRange();
 
-  // Get min and max dates for x-axis
   const getXAxisRange = () => {
     if (!startDate || !endDate) return { min: undefined, max: undefined };
 
     return {
       min: new Date(startDate).getTime(),
-      max: new Date(endDate).getTime() + (24 * 60 * 60 * 1000 - 1), // End of selected day
+      max: new Date(endDate).getTime() + (24 * 60 * 60 * 1000 - 1),
     };
   };
 
@@ -237,7 +221,6 @@ function App() {
       tooltip: {
         callbacks: {
           title: (context: TooltipItem<"line">[]) => {
-            // Format the date for the tooltip
             const timestamp = context[0].parsed.x;
             return new Date(timestamp).toLocaleDateString(undefined, {
               year: "numeric",
@@ -302,7 +285,7 @@ function App() {
           onClick={resetDateRange}
           disabled={!startDate && !endDate}
         >
-          Reset Range
+          Show all
         </button>
         {filteredData.length === 0 ? (
           <div className="message">
