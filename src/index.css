@@ -5,6 +5,8 @@ body {
   padding: 0;
 
   --bg-color: #a3be8c;
-  --text-color: #ebcb8b;
+  --text-color-dark: #ebcb8b;
+  --text-color: #f6ebd4;
   --highlight-color: #d87f32;
+  --error-color: #c44141;
 }
