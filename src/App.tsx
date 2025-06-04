@@ -41,8 +41,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get the base URL from the import.meta.env or use an empty string as fallback
-    const baseUrl = import.meta.env.BASE_URL || "";
+    // Get the base URL from the import.meta.env
+    const baseUrl = import.meta.env.BASE_URL || "/viktis/";
 
     // Fetch the data from the JSON file with the correct path
     fetch(`${baseUrl}data.json`)
@@ -81,8 +81,8 @@ function App() {
               label: "Weight (kg)",
               data: weightData.map((item) => item.weight),
               fill: false,
-              backgroundColor: "rgba(75, 192, 192, 0.2)",
-              borderColor: "rgba(75, 192, 192, 1)",
+              backgroundColor: "#D87F32", // Using the orange dots color from your config
+              borderColor: "#EBCB8B", // Using the line color from your config
               tension: 0.1,
             },
           ],
