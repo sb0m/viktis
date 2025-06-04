@@ -9,7 +9,10 @@ import {
   Title,
   Tooltip,
   Legend,
+  TimeScale,
+  type TooltipItem,
 } from "chart.js";
+import "chartjs-adapter-date-fns"; // You'll need to install this package
 import "./App.css";
 
 // Register Chart.js components
@@ -20,7 +23,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  TimeScale
 );
 
 // Define the data structure
@@ -44,7 +48,10 @@ function App() {
   const [maxDate, setMaxDate] = useState<string>("");
 
   useEffect(() => {
-    fetch("/viktis/data.json")
+    const baseUrl = import.meta.env.BASE_URL || "/viktis/";
+
+    // Fetch the data from the JSON file with the correct path
+    fetch(`${baseUrl}data.json`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(
@@ -65,6 +72,7 @@ function App() {
         if (sortedData.length > 0) {
           const firstDate = new Date(sortedData[0].date);
           const lastDate = new Date(sortedData[sortedData.length - 1].date);
+
           const firstDateStr = formatDateForInput(firstDate);
           const lastDateStr = formatDateForInput(lastDate);
 
@@ -90,7 +98,7 @@ function App() {
     return date.toISOString().split("T")[0];
   };
 
-  // Format date for display
+  // Format date for display - with timezone adjustment
   const formatDateForDisplay = (timestamp: number): string => {
     // Create date in local timezone
     const date = new Date(timestamp);
@@ -138,19 +146,18 @@ function App() {
     }
   };
 
-  const createDatasetWithGaps = () => {
+  // Create dataset for time scale chart
+  const createTimeScaleDataset = () => {
     if (filteredData.length === 0) return null;
 
-    // Create an array of all dates and weights
-    const dates = filteredData.map((item) => formatDateForDisplay(item.date));
-    const weights = filteredData.map((item) => item.weight);
-
     return {
-      labels: dates,
       datasets: [
         {
           label: "Weight (kg)",
-          data: weights,
+          data: filteredData.map((item) => ({
+            x: item.date, // Use timestamp directly for time scale
+            y: item.weight,
+          })),
           fill: false,
           backgroundColor: "#D87F32",
           borderColor: "#EBCB8B",
@@ -162,49 +169,86 @@ function App() {
     };
   };
 
-  const chartData = createDatasetWithGaps();
+  const chartData = createTimeScaleDataset();
+
+  // Calculate y-axis min and max based on filtered data
+  const calculateYAxisRange = () => {
+    if (filteredData.length === 0) {
+      return { min: undefined, max: undefined };
+    }
+
+    const weights = filteredData.map((item) => item.weight);
+    const minWeight = Math.min(...weights);
+    const maxWeight = Math.max(...weights);
+
+    // Calculate a reasonable range that shows the data well
+    const range = maxWeight - minWeight;
+    const padding = Math.max(0.5, range * 0.1); // At least 0.5kg or 10% of range
+
+    return {
+      min: Math.floor(minWeight - padding),
+      max: Math.ceil(maxWeight + padding),
+    };
+  };
+
+  const yAxisRange = calculateYAxisRange();
+
+  // Get min and max dates for x-axis
+  const getXAxisRange = () => {
+    if (!startDate || !endDate) return { min: undefined, max: undefined };
+
+    return {
+      min: new Date(startDate).getTime(),
+      max: new Date(endDate).getTime() + (24 * 60 * 60 * 1000 - 1), // End of selected day
+    };
+  };
+
+  const xAxisRange = getXAxisRange();
 
   const chartOptions = {
     responsive: true,
-    // plugins: {
-    //   // legend: {
-    //   //   position: "top" as const,
-    //   // },
-    //   // title: {
-    //   //   display: true,
-    //   //   text: "Weight Tracking Over Time",
-    //   // },
-    // },
     scales: {
       x: {
+        type: "time" as const,
+        time: {
+          unit: "day" as const,
+          displayFormats: {
+            day: "MMM d",
+          },
+          tooltipFormat: "MMM d, yyyy",
+        },
         title: {
           display: true,
           text: "Date",
         },
-        ticks: {
-          // maxTicksLimit: 10, // Limit the number of ticks to avoid overcrowding
-        },
+        min: xAxisRange.min,
+        max: xAxisRange.max,
       },
       y: {
         title: {
           display: true,
           text: "Weight (kg)",
         },
-        min:
-          filteredData.length > 0
-            ? Math.floor(
-                Math.min(...filteredData.map((item) => item.weight)) - 1
-              )
-            : undefined,
-        max:
-          filteredData.length > 0
-            ? Math.ceil(
-                Math.max(...filteredData.map((item) => item.weight)) + 1
-              )
-            : undefined,
+        min: yAxisRange.min,
+        max: yAxisRange.max,
       },
     },
-    spanGaps: true,
+    plugins: {
+      tooltip: {
+        callbacks: {
+          title: (context: TooltipItem<"line">[]) => {
+            // Format the date for the tooltip
+            const timestamp = context[0].parsed.x;
+            return new Date(timestamp).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              timeZone: "UTC",
+            });
+          },
+        },
+      },
+    },
   };
 
   if (loading) {
@@ -224,8 +268,6 @@ function App() {
   if (weightData.length === 0) {
     return <div className="message">No weight data available.</div>;
   }
-
-  console.log(filteredData);
 
   return (
     <>
