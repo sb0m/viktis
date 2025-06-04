@@ -1,0 +1,10 @@
+body {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+
+  --bg-color: #a3be8c;
+  --text-color: #ebcb8b;
+  --highlight-color: #d87f32;
+}

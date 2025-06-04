@@ -2,34 +2,34 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["favicon.svg"],
-      manifest: {
-        name: "viktis",
-        short_name: "viktis",
-        start_url: ".",
-        display: "standalone",
-        background_color: "#A3BE8C",
-        theme_color: "#EBCB8B",
-        icons: [
-          {
-            src: "viktis-icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "viktis-icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-        ],
-      },
-    }),
+const manifestForPlugIn = {
+  name: "viktis",
+  short_name: "viktis",
+  display: "standalone",
+  scope: "/viktis/",
+  start_url: "/viktis/",
+  orientation: "portrait",
+  background_color: "#A3BE8C",
+  theme_color: "#EBCB8B",
+  icons: [
+    {
+      src: "viktis-icon-192.png",
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "maskable",
+    },
+    {
+      src: "viktis-icon-512.png",
+      sizes:
+        "72x72 96x96 128x128 144x144 152x152 192x192 256x256 384x384 512x512",
+      type: "image/png",
+      purpose: "maskable",
+    },
   ],
+};
+
+export default defineConfig({
+  plugins: [react(), VitePWA(manifestForPlugIn)],
   base: "/viktis/",
 });
 
