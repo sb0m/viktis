@@ -8,7 +8,7 @@ const manifestForPlugIn = {
   display: "standalone",
   scope: "/viktis/",
   start_url: "/viktis/",
-  orientation: "horizontal",
+  orientation: "landscape",
   background_color: "#A3BE8C",
   theme_color: "#EBCB8B",
   icons: [

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -36,6 +36,11 @@ interface DataResponse {
 }
 
 function App() {
+  // Define formatDateForInput at the top before using it
+  const formatDateForInput = (date: Date): string => {
+    return date.toISOString().split("T")[0];
+  };
+
   const [weightData, setWeightData] = useState<WeightData[]>([]);
   const [filteredData, setFilteredData] = useState<WeightData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,9 +50,125 @@ function App() {
   const [minDate, setMinDate] = useState<string>("");
   const [maxDate, setMaxDate] = useState<string>("");
 
+  // New state for adding data points
+  const [newDate, setNewDate] = useState<string>(
+    formatDateForInput(new Date())
+  );
+  const [newWeight, setNewWeight] = useState<string>("");
+  const [addingData, setAddingData] = useState<boolean>(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  // Ref to track if we've loaded data from local storage
+  const localDataLoaded = useRef(false);
+
+  // Local storage key
+  const LOCAL_STORAGE_KEY = "viktis_user_data";
+
+  // Load user data from local storage and merge with base data
+  const loadAndMergeUserData = (baseData: WeightData[]) => {
+    try {
+      const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+      let userData: WeightData[] = [];
+
+      if (storedData) {
+        userData = JSON.parse(storedData);
+        console.log("Loaded user data from local storage:", userData);
+      }
+
+      // Merge base data with user data (user data overwrites base data for same dates)
+      const mergedData = mergeWeightData(baseData, userData);
+
+      // Sort by date
+      const sortedData = mergedData.sort((a, b) => a.date - b.date);
+
+      setWeightData(sortedData);
+      setFilteredData(sortedData);
+
+      if (sortedData.length > 0) {
+        const firstDate = new Date(sortedData[0].date);
+
+        // For max date, use either the last data point or today, whichever is later
+        const lastDataDate = new Date(sortedData[sortedData.length - 1].date);
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        const lastDate = today > lastDataDate ? today : lastDataDate;
+
+        const firstDateStr = formatDateForInput(firstDate);
+        const lastDateStr = formatDateForInput(lastDate);
+
+        setMinDate(firstDateStr);
+        setMaxDate(lastDateStr); // This should now include today
+
+        setStartDate(firstDateStr);
+        setEndDate(lastDateStr);
+      }
+
+      localDataLoaded.current = true;
+    } catch (err) {
+      console.error("Error loading user data from local storage:", err);
+      // Continue with just the base data
+      const sortedData = [...baseData].sort((a, b) => a.date - b.date);
+      setWeightData(sortedData);
+      setFilteredData(sortedData);
+
+      if (sortedData.length > 0) {
+        const firstDate = new Date(sortedData[0].date);
+        const lastDate = new Date(sortedData[sortedData.length - 1].date);
+
+        setMinDate(formatDateForInput(firstDate));
+        setMaxDate(formatDateForInput(lastDate));
+
+        setStartDate(formatDateForInput(firstDate));
+        setEndDate(formatDateForInput(lastDate));
+      }
+    }
+  };
+
+  // Merge base data with user data, with user data taking precedence
+  const mergeWeightData = (
+    baseData: WeightData[],
+    userData: WeightData[]
+  ): WeightData[] => {
+    // Create a map of all base data indexed by date
+    const dataMap = new Map<number, WeightData>();
+
+    // Add base data to map
+    baseData.forEach((item) => {
+      // Normalize to start of day to ensure consistent date comparison
+      const date = new Date(item.date);
+      date.setHours(0, 0, 0, 0);
+      dataMap.set(date.getTime(), { ...item, date: date.getTime() });
+    });
+
+    // Override with user data
+    userData.forEach((item) => {
+      // Normalize to start of day
+      const date = new Date(item.date);
+      date.setHours(0, 0, 0, 0);
+      dataMap.set(date.getTime(), { ...item, date: date.getTime() });
+    });
+
+    // Convert map back to array
+    return Array.from(dataMap.values());
+  };
+
+  // Save user data to local storage
+  const saveUserData = (userData: WeightData[]) => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userData));
+      console.log("Saved user data to local storage:", userData);
+    } catch (err) {
+      console.error("Error saving user data to local storage:", err);
+      setAddError(
+        "Failed to save data to local storage. Your browser might have storage restrictions."
+      );
+    }
+  };
+
   useEffect(() => {
     const baseUrl = import.meta.env.BASE_URL || "/viktis/";
 
+    // First load data from the JSON file
     fetch(`${baseUrl}data.json`)
       .then((response) => {
         if (!response.ok) {
@@ -62,23 +183,13 @@ function App() {
         if (!data.weights || !Array.isArray(data.weights)) {
           throw new Error("Invalid data format: weights array not found");
         }
-        const sortedData = [...data.weights].sort((a, b) => a.date - b.date);
-        setWeightData(sortedData);
-        setFilteredData(sortedData);
 
-        if (sortedData.length > 0) {
-          const firstDate = new Date(sortedData[0].date);
-          const lastDate = new Date(sortedData[sortedData.length - 1].date);
+        // Get base data from JSON
+        const baseData = [...data.weights];
 
-          const firstDateStr = formatDateForInput(firstDate);
-          const lastDateStr = formatDateForInput(lastDate);
+        // Then load user data from local storage and merge
+        loadAndMergeUserData(baseData);
 
-          setMinDate(firstDateStr);
-          setMaxDate(lastDateStr);
-
-          setStartDate(firstDateStr);
-          setEndDate(lastDateStr);
-        }
         setLoading(false);
       })
       .catch((err) => {
@@ -107,8 +218,119 @@ function App() {
     setFilteredData(filtered);
   }, [startDate, endDate, weightData]);
 
-  const formatDateForInput = (date: Date): string => {
-    return date.toISOString().split("T")[0];
+  const addOrUpdateDataPoint = () => {
+    setAddError(null);
+
+    if (!newDate || !newWeight) {
+      setAddError("Please enter both date and weight");
+      return;
+    }
+
+    const weightValue = parseFloat(newWeight);
+    if (isNaN(weightValue) || weightValue <= 0 || weightValue > 500) {
+      setAddError("Please enter a valid weight (between 0 and 500 kg)");
+      return;
+    }
+
+    try {
+      // Create new data point
+      const dateValue = new Date(newDate);
+      // Set time to noon to avoid timezone issues
+      dateValue.setHours(12, 0, 0, 0);
+
+      const newDataPoint: WeightData = {
+        date: dateValue.getTime(),
+        weight: weightValue,
+      };
+
+      // Get existing user data from local storage
+      const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+      const userData: WeightData[] = storedData ? JSON.parse(storedData) : [];
+
+      // Check if we already have data for this date
+      const existingIndex = userData.findIndex((item) => {
+        const itemDate = new Date(item.date);
+        return itemDate.toDateString() === dateValue.toDateString();
+      });
+
+      if (existingIndex >= 0) {
+        // Update existing data point
+        userData[existingIndex] = newDataPoint;
+      } else {
+        // Add new data point
+        userData.push(newDataPoint);
+      }
+
+      // Save updated user data
+      saveUserData(userData);
+
+      // Update state with merged data
+      const mergedData = mergeWeightData(weightData, userData);
+      const sortedData = mergedData.sort((a, b) => a.date - b.date);
+
+      setWeightData(sortedData);
+
+      // Get today's date for max date calculation
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      const todayStr = formatDateForInput(today);
+
+      // Update min and max dates based on the full dataset and today
+      if (sortedData.length > 0) {
+        const firstDate = new Date(sortedData[0].date);
+
+        // For max date, use either the last data point or today, whichever is later
+        const lastDataDate = new Date(sortedData[sortedData.length - 1].date);
+        const lastDate = today > lastDataDate ? today : lastDataDate;
+
+        const firstDateStr = formatDateForInput(firstDate);
+        const lastDateStr = formatDateForInput(lastDate);
+
+        // Update min and max dates
+        setMinDate(firstDateStr);
+        setMaxDate(lastDateStr); // This should now include today
+
+        // If the current date range is outside the new data range, update it
+        if (!startDate || new Date(startDate) < firstDate) {
+          setStartDate(firstDateStr);
+        }
+
+        // Always allow selecting up to today
+        if (!endDate || new Date(endDate) > lastDate) {
+          setEndDate(lastDateStr);
+        }
+      } else {
+        // If no data, set min and max to today
+        setMinDate(todayStr);
+        setMaxDate(todayStr);
+        setStartDate(todayStr);
+        setEndDate(todayStr);
+      }
+
+      // Update filtered data based on current date range
+      const newFilteredData = sortedData.filter((item) => {
+        const itemDate = new Date(item.date);
+        const startDateObj = startDate ? new Date(startDate) : null;
+        const endDateObj = endDate ? new Date(endDate) : null;
+
+        if (startDateObj) startDateObj.setHours(0, 0, 0, 0);
+        if (endDateObj) endDateObj.setHours(23, 59, 59, 999);
+
+        return (
+          (!startDateObj || itemDate >= startDateObj) &&
+          (!endDateObj || itemDate <= endDateObj)
+        );
+      });
+
+      setFilteredData(newFilteredData);
+
+      // Reset form
+      setNewWeight("");
+      setAddingData(false);
+    } catch (err) {
+      console.error("Error adding data point:", err);
+      setAddError("Failed to add data point. Please try again.");
+    }
   };
 
   const resetDateRange = () => {
@@ -275,6 +497,59 @@ function App() {
           >
             Show all
           </button>
+          <div className="add-data-container">
+            {addingData ? (
+              <div className="add-data-form">
+                <h3>Add Weight Data</h3>
+                {addError && <div className="error-message">{addError}</div>}
+                <div className="form-group">
+                  <label htmlFor="new-date">Date:</label>
+                  <input
+                    type="date"
+                    id="new-date"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    max={formatDateForInput(new Date())}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="new-weight">Weight (kg):</label>
+                  <input
+                    type="number"
+                    id="new-weight"
+                    value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                    step="0.1"
+                    min="0"
+                    max="500"
+                    placeholder="Enter weight in kg"
+                  />
+                </div>
+                <div className="form-buttons">
+                  <button onClick={addOrUpdateDataPoint}>Save</button>
+                  <button
+                    onClick={() => {
+                      setAddingData(false);
+                      setAddError(null);
+                      setNewWeight("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="add-data-button"
+                onClick={() => {
+                  setNewDate(formatDateForInput(new Date()));
+                  setAddingData(true);
+                }}
+              >
+                Add Weight Data
+              </button>
+            )}
+          </div>
         </div>
 
         {filteredData.length === 0 ? (

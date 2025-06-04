@@ -29,6 +29,13 @@
       /* height: 100% !important; */
     }
   }
+
+  .add-data-form {
+    display: flex;
+    .form-buttons {
+      display: flex;
+    }
+  }
 }
 
 h1 {
