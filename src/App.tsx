@@ -111,17 +111,6 @@ function App() {
     return date.toISOString().split("T")[0];
   };
 
-  const formatDateForDisplay = (timestamp: number): string => {
-    const date = new Date(timestamp);
-
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      timeZone: "UTC",
-    });
-  };
-
   const resetDateRange = () => {
     if (weightData.length > 0) {
       const firstDate = new Date(weightData[0].date);
@@ -279,32 +268,22 @@ function App() {
               max={maxDate}
             />
           </div>
+          <button
+            className="reset-button"
+            onClick={resetDateRange}
+            disabled={!startDate && !endDate}
+          >
+            Show all
+          </button>
         </div>
-        <button
-          className="reset-button"
-          onClick={resetDateRange}
-          disabled={!startDate && !endDate}
-        >
-          Show all
-        </button>
+
         {filteredData.length === 0 ? (
           <div className="message">
             No data available for the selected date range.
           </div>
         ) : (
-          <div className="chart-container">
+          <div className="chart-wrapper">
             {chartData && <Line data={chartData} options={chartOptions} />}
-            <div className="data-summary">
-              <p>Showing {filteredData.length} data points</p>
-              {filteredData.length > 0 && (
-                <p>
-                  Range: {formatDateForDisplay(filteredData[0].date)} to{" "}
-                  {formatDateForDisplay(
-                    filteredData[filteredData.length - 1].date
-                  )}
-                </p>
-              )}
-            </div>
           </div>
         )}
       </div>
