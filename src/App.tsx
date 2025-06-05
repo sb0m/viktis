@@ -73,73 +73,13 @@ function App() {
 
   const initializeViewWindow = (data: WeightData[], endTimestamp: number) => {
     // Set the view end date to the provided timestamp
+
+    console.log("Initializing view window data:", data);
     setViewEndDate(endTimestamp);
 
     // Set the view start date to 25 days before (26 days total)
     const startTimestamp = endTimestamp - 25 * 24 * 60 * 60 * 1000;
     setViewStartDate(startTimestamp);
-  };
-
-  // Load user data from local storage and merge with base data
-  const loadAndMergeUserData = (baseData: WeightData[]) => {
-    try {
-      const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let userData: WeightData[] = [];
-
-      if (storedData) {
-        userData = JSON.parse(storedData);
-        console.log("Loaded user data from local storage:", userData);
-      }
-
-      // Merge base data with user data (user data overwrites base data for same dates)
-      const mergedData = mergeWeightData(baseData, userData);
-
-      // Sort by date
-      const sortedData = mergedData.sort((a, b) => a.date - b.date);
-
-      setWeightData(sortedData);
-      setFilteredData(sortedData);
-
-      if (sortedData.length > 0) {
-        const firstDate = new Date(sortedData[0].date);
-
-        // For max date, use either the last data point or today, whichever is later
-        const lastDataDate = new Date(sortedData[sortedData.length - 1].date);
-        const today = new Date();
-        today.setHours(12, 0, 0, 0);
-        const lastDate = today > lastDataDate ? today : lastDataDate;
-
-        const firstDateStr = formatDateForInput(firstDate);
-        const lastDateStr = formatDateForInput(lastDate);
-
-        setMinDate(firstDateStr);
-        setMaxDate(lastDateStr); // This should now include today
-
-        setStartDate(firstDateStr);
-        setEndDate(lastDateStr);
-
-        initializeViewWindow(sortedData, lastDate.getTime());
-      }
-
-      localDataLoaded.current = true;
-    } catch (err) {
-      console.error("Error loading user data from local storage:", err);
-      // Continue with just the base data
-      const sortedData = [...baseData].sort((a, b) => a.date - b.date);
-      setWeightData(sortedData);
-      setFilteredData(sortedData);
-
-      if (sortedData.length > 0) {
-        const firstDate = new Date(sortedData[0].date);
-        const lastDate = new Date(sortedData[sortedData.length - 1].date);
-
-        setMinDate(formatDateForInput(firstDate));
-        setMaxDate(formatDateForInput(lastDate));
-
-        setStartDate(formatDateForInput(firstDate));
-        setEndDate(formatDateForInput(lastDate));
-      }
-    }
   };
 
   // Merge base data with user data, with user data taking precedence
@@ -184,6 +124,68 @@ function App() {
   };
 
   useEffect(() => {
+    // Load user data from local storage and merge with base data
+    const loadAndMergeUserData = (baseData: WeightData[]) => {
+      try {
+        const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+        let userData: WeightData[] = [];
+
+        if (storedData) {
+          userData = JSON.parse(storedData);
+          console.log("Loaded user data from local storage:", userData);
+        }
+
+        // Merge base data with user data (user data overwrites base data for same dates)
+        const mergedData = mergeWeightData(baseData, userData);
+
+        // Sort by date
+        const sortedData = mergedData.sort((a, b) => a.date - b.date);
+
+        setWeightData(sortedData);
+        setFilteredData(sortedData);
+
+        if (sortedData.length > 0) {
+          const firstDate = new Date(sortedData[0].date);
+
+          // For max date, use either the last data point or today, whichever is later
+          const lastDataDate = new Date(sortedData[sortedData.length - 1].date);
+          const today = new Date();
+          today.setHours(12, 0, 0, 0);
+          const lastDate = today > lastDataDate ? today : lastDataDate;
+
+          const firstDateStr = formatDateForInput(firstDate);
+          const lastDateStr = formatDateForInput(lastDate);
+
+          setMinDate(firstDateStr);
+          setMaxDate(lastDateStr); // This should now include today
+
+          setStartDate(firstDateStr);
+          setEndDate(lastDateStr);
+
+          initializeViewWindow(sortedData, lastDate.getTime());
+        }
+
+        localDataLoaded.current = true;
+      } catch (err) {
+        console.error("Error loading user data from local storage:", err);
+        // Continue with just the base data
+        const sortedData = [...baseData].sort((a, b) => a.date - b.date);
+        setWeightData(sortedData);
+        setFilteredData(sortedData);
+
+        if (sortedData.length > 0) {
+          const firstDate = new Date(sortedData[0].date);
+          const lastDate = new Date(sortedData[sortedData.length - 1].date);
+
+          setMinDate(formatDateForInput(firstDate));
+          setMaxDate(formatDateForInput(lastDate));
+
+          setStartDate(formatDateForInput(firstDate));
+          setEndDate(formatDateForInput(lastDate));
+        }
+      }
+    };
+
     const baseUrl = import.meta.env.BASE_URL || "/viktis/";
 
     console.log("Base URL:", baseUrl);
@@ -237,7 +239,7 @@ function App() {
     }
 
     setFilteredData(filtered);
-  }, [startDate, endDate, weightData]);
+  }, [startDate, endDate, weightData, viewEndDate]);
 
   useEffect(() => {
     if (!endDate || filteredData.length === 0) return;
