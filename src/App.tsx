@@ -168,9 +168,12 @@ function App() {
   useEffect(() => {
     const baseUrl = import.meta.env.BASE_URL || "/viktis/";
 
+    console.log("Base URL:", baseUrl);
+
     // First load data from the JSON file
     fetch(`${baseUrl}data.json`)
       .then((response) => {
+        console.log("Response: ", response);
         if (!response.ok) {
           throw new Error(
             `Failed to fetch data: ${response.status} ${response.statusText}`
