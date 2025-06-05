@@ -188,7 +188,6 @@ function App() {
 
     console.log("Base URL:", baseUrl);
 
-    // First load data from the JSON file
     fetch(`${baseUrl}data.json`)
       .then((response) => {
         console.log("Response: ", response);
