@@ -32,9 +32,3 @@ export default defineConfig({
   plugins: [react(), VitePWA(manifestForPlugIn)],
   base: "/viktis/",
 });
-
-// Orange dots: #D87F32
-
-// Line: #EBCB8B (soft yellow)
-
-// Background: #A3BE8C (muted green)

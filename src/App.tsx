@@ -11,9 +11,11 @@ import {
   Legend,
   TimeScale,
   type TooltipItem,
+  type Chart,
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import "./App.css";
+import zoomPlugin from "chartjs-plugin-zoom";
 
 ChartJS.register(
   CategoryScale,
@@ -23,7 +25,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  TimeScale
+  TimeScale,
+  zoomPlugin
 );
 
 interface WeightData {
@@ -58,11 +61,24 @@ function App() {
   const [addingData, setAddingData] = useState<boolean>(false);
   const [addError, setAddError] = useState<string | null>(null);
 
+  const [viewStartDate, setViewStartDate] = useState<number>(0);
+  const [viewEndDate, setViewEndDate] = useState<number>(0);
+
   // Ref to track if we've loaded data from local storage
   const localDataLoaded = useRef(false);
+  const chartRef = useRef(null);
 
   // Local storage key
   const LOCAL_STORAGE_KEY = "viktis_user_data";
+
+  const initializeViewWindow = (data: WeightData[], endTimestamp: number) => {
+    // Set the view end date to the provided timestamp
+    setViewEndDate(endTimestamp);
+
+    // Set the view start date to 25 days before (26 days total)
+    const startTimestamp = endTimestamp - 25 * 24 * 60 * 60 * 1000;
+    setViewStartDate(startTimestamp);
+  };
 
   // Load user data from local storage and merge with base data
   const loadAndMergeUserData = (baseData: WeightData[]) => {
@@ -101,6 +117,8 @@ function App() {
 
         setStartDate(firstDateStr);
         setEndDate(lastDateStr);
+
+        initializeViewWindow(sortedData, lastDate.getTime());
       }
 
       localDataLoaded.current = true;
@@ -207,9 +225,10 @@ function App() {
 
     let filtered = [...weightData];
 
-    if (startDate) {
-      const startTimestamp = new Date(startDate).getTime();
-      filtered = filtered.filter((item) => item.date >= startTimestamp);
+    if (filtered.length > 0 && viewEndDate === 0) {
+      const lastDate = new Date();
+      lastDate.setHours(12, 0, 0, 0);
+      initializeViewWindow(filtered, lastDate.getTime());
     }
 
     if (endDate) {
@@ -392,35 +411,32 @@ function App() {
 
   const yAxisRange = calculateYAxisRange();
 
-  const getXAxisRange = () => {
-    if (!startDate || !endDate) return { min: undefined, max: undefined };
-
-    return {
-      min: new Date(startDate).getTime(),
-      max: new Date(endDate).getTime() + (24 * 60 * 60 * 1000 - 1),
-    };
-  };
-
-  const xAxisRange = getXAxisRange();
-
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     scales: {
       x: {
         type: "time" as const,
         time: {
           unit: "day" as const,
           displayFormats: {
-            day: "MMM d",
+            day: "MMM d, yyyy",
           },
           tooltipFormat: "MMM d, yyyy",
+          stepSize: 1, // One tick per day
         },
         title: {
           display: true,
           text: "Date",
         },
-        min: xAxisRange.min,
-        max: xAxisRange.max,
+        min: viewStartDate || undefined,
+        max: viewEndDate || undefined,
+        ticks: {
+          source: "auto",
+          autoSkip: false,
+          maxRotation: 45,
+          minRotation: 45,
+        },
       },
       y: {
         title: {
@@ -432,6 +448,34 @@ function App() {
       },
     },
     plugins: {
+      zoom: {
+        pan: {
+          enabled: true,
+          mode: "x",
+          onPan: ({ chart }: { chart: Chart }) => {
+            // Update the view window when panning
+            const xScale = chart.scales.x;
+            setViewStartDate(xScale.min);
+            setViewEndDate(xScale.max);
+          },
+        },
+        limits: {
+          x: {
+            minRange: 26 * 24 * 60 * 60 * 1000, // 26 days in milliseconds
+            maxRange: 26 * 24 * 60 * 60 * 1000, // Keep fixed 26-day window
+            min: new Date(minDate).getTime(),
+            max: new Date(maxDate).getTime() + 24 * 60 * 60 * 1000, // Add one day to include the end date
+          },
+        },
+        zoom: {
+          wheel: {
+            enabled: false, // Disable wheel zoom to maintain fixed 26-day window
+          },
+          pinch: {
+            enabled: false, // Disable pinch zoom
+          },
+        },
+      },
       tooltip: {
         callbacks: {
           title: (context: TooltipItem<"line">[]) => {
@@ -561,7 +605,10 @@ function App() {
           </div>
         ) : (
           <div className="chart-wrapper">
-            {chartData && <Line data={chartData} options={chartOptions} />}
+            {chartData && (
+              // @ts-expect-error huhu
+              <Line data={chartData} options={chartOptions} ref={chartRef} />
+            )}
           </div>
         )}
       </div>

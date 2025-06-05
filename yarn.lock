@@ -1883,6 +1883,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/hammerjs@npm:^2.0.45":
+  version: 2.0.46
+  resolution: "@types/hammerjs@npm:2.0.46"
+  checksum: 10c0/f3c1cb20dc2f0523f7b8c76065078544d50d8ae9b0edc1f62fed657210ed814266ff2dfa835d2c157a075991001eec3b64c88bf92e3e6e895c0db78d05711d06
+  languageName: node
+  linkType: hard
+
 "@types/json-schema@npm:^7.0.15":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
@@ -2422,6 +2429,18 @@ __metadata:
     chart.js: ">=2.8.0"
     date-fns: ">=2.0.0"
   checksum: 10c0/bc785632da9e6253a969c84f5d382e39944246de8410285f060d6715b3ed681cee80142bb2c410329b4c21094efc6d54f9c289200463dce865f736a01a76de4b
+  languageName: node
+  linkType: hard
+
+"chartjs-plugin-zoom@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "chartjs-plugin-zoom@npm:2.2.0"
+  dependencies:
+    "@types/hammerjs": "npm:^2.0.45"
+    hammerjs: "npm:^2.0.8"
+  peerDependencies:
+    chart.js: ">=3.2.0"
+  checksum: 10c0/15817e912dcc0c62e66121d10c7f1af04cd788c8c831b9ed8f822e2835501b8816143e10b5b4f286a9afddc91492c3d7104b49e7226a3fb682b94412f9ee4087
   languageName: node
   linkType: hard
 
@@ -3521,6 +3540,13 @@ __metadata:
   version: 1.4.0
   resolution: "graphemer@npm:1.4.0"
   checksum: 10c0/e951259d8cd2e0d196c72ec711add7115d42eb9a8146c8eeda5b8d3ac91e5dd816b9cd68920726d9fd4490368e7ed86e9c423f40db87e2d8dfafa00fa17c3a31
+  languageName: node
+  linkType: hard
+
+"hammerjs@npm:^2.0.8":
+  version: 2.0.8
+  resolution: "hammerjs@npm:2.0.8"
+  checksum: 10c0/5c95e5774b5ea49492cb3fa8f1949aea67048a0b84af33acb555e7139abfcf3c83aca2b83e0c5008755bc230166df7b5e469d1e3eb6746c48f215f3672609fed
   languageName: node
   linkType: hard
 
@@ -5795,6 +5821,7 @@ __metadata:
     "@vitejs/plugin-react": "npm:^4.4.1"
     chart.js: "npm:^4.4.9"
     chartjs-adapter-date-fns: "npm:^3.0.0"
+    chartjs-plugin-zoom: "npm:^2.2.0"
     date-fns: "npm:^4.1.0"
     eslint: "npm:^9.25.0"
     eslint-plugin-react-hooks: "npm:^5.2.0"
