@@ -240,6 +240,27 @@ function App() {
     setFilteredData(filtered);
   }, [startDate, endDate, weightData]);
 
+  useEffect(() => {
+    if (!endDate || filteredData.length === 0) return;
+
+    // Get the end date timestamp (end of day)
+    const endDateObj = new Date(endDate);
+    endDateObj.setHours(23, 59, 59, 999);
+    const endTimestamp = endDateObj.getTime();
+
+    // Set the view end date to match the end date from the date picker
+    setViewEndDate(endTimestamp);
+
+    // Set the view start date to 25 days before (26 days total)
+    const startTimestamp = endTimestamp - 25 * 24 * 60 * 60 * 1000;
+    setViewStartDate(startTimestamp);
+
+    console.log("View window updated based on date range:", {
+      start: new Date(startTimestamp).toISOString(),
+      end: new Date(endTimestamp).toISOString(),
+    });
+  }, [endDate, filteredData]);
+
   const addOrUpdateDataPoint = () => {
     setAddError(null);
 
@@ -463,8 +484,10 @@ function App() {
           x: {
             minRange: 26 * 24 * 60 * 60 * 1000, // 26 days in milliseconds
             maxRange: 26 * 24 * 60 * 60 * 1000, // Keep fixed 26-day window
-            min: new Date(minDate).getTime(),
-            max: new Date(maxDate).getTime() + 24 * 60 * 60 * 1000, // Add one day to include the end date
+            min: startDate ? new Date(startDate).getTime() : undefined,
+            max: endDate
+              ? new Date(endDate).getTime() + 24 * 60 * 60 * 1000 - 1
+              : undefined, // End of the end date
           },
         },
         zoom: {
