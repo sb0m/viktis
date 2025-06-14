@@ -16,3 +16,22 @@ body {
   border: none;
   cursor: pointer;
 }
+
+.settings {
+  .chart-interval {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .add-data {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+
+    .form {
+      display: flex;
+    }
+  }
+}

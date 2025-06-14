@@ -16,7 +16,8 @@ import {
 import "chartjs-adapter-date-fns";
 import "./App.css";
 import zoomPlugin from "chartjs-plugin-zoom";
-import { VscFoldUp, VscFoldDown } from "react-icons/vsc";
+import { VscFoldUp, VscFoldDown, VscExport } from "react-icons/vsc";
+import { saveAs } from "file-saver";
 
 ChartJS.register(
   CategoryScale,
@@ -244,26 +245,39 @@ function App() {
     setFilteredData(filtered);
   }, [startDate, endDate, weightData, viewEndDate]);
 
-  // useEffect(() => {
-  //   if (!endDate || filteredData.length === 0) return;
+  const exportData = () => {
+    try {
+      // Use the same LOCAL_STORAGE_KEY as used in addOrUpdateDataPoint
+      const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
 
-  //   // Get the end date timestamp (end of day)
-  //   const endDateObj = new Date(endDate);
-  //   endDateObj.setHours(23, 59, 59, 999);
-  //   const endTimestamp = endDateObj.getTime();
+      if (!storedData) {
+        alert("No data found in local storage.");
+        return;
+      }
 
-  //   // Set the view end date to match the end date from the date picker
-  //   setViewEndDate(endTimestamp);
+      // Parse the stored data - this will be an array of WeightData objects
+      const userData: WeightData[] = JSON.parse(storedData);
 
-  //   // Set the view start date to 25 days before (26 days total)
-  //   const startTimestamp = endTimestamp - 25 * 24 * 60 * 60 * 1000;
-  //   setViewStartDate(startTimestamp);
+      // Format it to match the structure in public/data.json
+      const exportData = {
+        settings: [{ key: "goal" }],
+        version: 0,
+        weights: userData,
+      };
 
-  //   console.log("View window updated based on date range:", {
-  //     start: new Date(startTimestamp).toISOString(),
-  //     end: new Date(endTimestamp).toISOString(),
-  //   });
-  // }, [endDate, filteredData]);
+      // Convert to JSON string with pretty formatting
+      const jsonString = JSON.stringify(exportData, null, 2);
+
+      // Create a blob and download it
+      const blob = new Blob([jsonString], { type: "application/json" });
+      saveAs(blob, "weight_data_export.json");
+
+      console.log("Data exported successfully");
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      alert("Failed to export data. See console for details.");
+    }
+  };
 
   const addOrUpdateDataPoint = () => {
     setAddError(null);
@@ -547,41 +561,42 @@ function App() {
           {visibleSettings ? <VscFoldUp /> : <VscFoldDown />}
         </button>
         {visibleSettings && (
-          <div className="date-inputs">
-            <div className="date-input-group">
-              <label htmlFor="start-date">From:</label>
-              <input
-                type="date"
-                id="start-date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                min={minDate}
-                max={endDate || maxDate}
-              />
-            </div>
+          <div className="settings">
+            <div className="chart-interval">
+              <div className="date-input-group">
+                <label htmlFor="start-date">From:</label>
+                <input
+                  type="date"
+                  id="start-date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  min={minDate}
+                  max={endDate || maxDate}
+                />
+              </div>
 
-            <div className="date-input-group">
-              <label htmlFor="end-date">To:</label>
-              <input
-                type="date"
-                id="end-date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate || minDate}
-                max={maxDate}
-              />
+              <div className="date-input-group">
+                <label htmlFor="end-date">To:</label>
+                <input
+                  type="date"
+                  id="end-date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || minDate}
+                  max={maxDate}
+                />
+              </div>
+              <button
+                className="reset-button"
+                onClick={resetDateRange}
+                disabled={!startDate && !endDate}
+              >
+                Show all
+              </button>
             </div>
-            <button
-              className="reset-button"
-              onClick={resetDateRange}
-              disabled={!startDate && !endDate}
-            >
-              Show all
-            </button>
-            <div className="add-data-container">
+            <div className="add-data">
               {addingData ? (
-                <div className="add-data-form">
-                  <h3>Add Weight Data</h3>
+                <div className="form">
                   {addError && <div className="error-message">{addError}</div>}
                   <div className="form-group">
                     <label htmlFor="new-date">Date:</label>
@@ -606,18 +621,16 @@ function App() {
                       placeholder="Enter weight in kg"
                     />
                   </div>
-                  <div className="form-buttons">
-                    <button onClick={addOrUpdateDataPoint}>Save</button>
-                    <button
-                      onClick={() => {
-                        setAddingData(false);
-                        setAddError(null);
-                        setNewWeight("");
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                  <button onClick={addOrUpdateDataPoint}>Save</button>
+                  <button
+                    onClick={() => {
+                      setAddingData(false);
+                      setAddError(null);
+                      setNewWeight("");
+                    }}
+                  >
+                    Cancel
+                  </button>
                 </div>
               ) : (
                 <button
@@ -631,6 +644,9 @@ function App() {
                 </button>
               )}
             </div>
+            <button onClick={exportData}>
+              <VscExport />
+            </button>
           </div>
         )}
 
