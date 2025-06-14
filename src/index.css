@@ -10,3 +10,9 @@ body {
   --highlight-color: #d87f32;
   --error-color: #c44141;
 }
+
+.settings-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}

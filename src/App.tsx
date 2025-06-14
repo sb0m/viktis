@@ -16,6 +16,7 @@ import {
 import "chartjs-adapter-date-fns";
 import "./App.css";
 import zoomPlugin from "chartjs-plugin-zoom";
+import { VscFoldUp, VscFoldDown } from "react-icons/vsc";
 
 ChartJS.register(
   CategoryScale,
@@ -63,6 +64,8 @@ function App() {
 
   const [viewStartDate, setViewStartDate] = useState<number>(0);
   const [viewEndDate, setViewEndDate] = useState<number>(0);
+
+  const [visibleSettings, setVisibleSettings] = useState<boolean>(false);
 
   // Ref to track if we've loaded data from local storage
   const localDataLoaded = useRef(false);
@@ -537,91 +540,99 @@ function App() {
   return (
     <>
       <div className="chart-container">
-        <div className="date-inputs">
-          <div className="date-input-group">
-            <label htmlFor="start-date">From:</label>
-            <input
-              type="date"
-              id="start-date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              min={minDate}
-              max={endDate || maxDate}
-            />
-          </div>
+        <button
+          className="settings-button"
+          onClick={() => setVisibleSettings((prev) => !prev)}
+        >
+          {visibleSettings ? <VscFoldUp /> : <VscFoldDown />}
+        </button>
+        {visibleSettings && (
+          <div className="date-inputs">
+            <div className="date-input-group">
+              <label htmlFor="start-date">From:</label>
+              <input
+                type="date"
+                id="start-date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                min={minDate}
+                max={endDate || maxDate}
+              />
+            </div>
 
-          <div className="date-input-group">
-            <label htmlFor="end-date">To:</label>
-            <input
-              type="date"
-              id="end-date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              min={startDate || minDate}
-              max={maxDate}
-            />
+            <div className="date-input-group">
+              <label htmlFor="end-date">To:</label>
+              <input
+                type="date"
+                id="end-date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || minDate}
+                max={maxDate}
+              />
+            </div>
+            <button
+              className="reset-button"
+              onClick={resetDateRange}
+              disabled={!startDate && !endDate}
+            >
+              Show all
+            </button>
+            <div className="add-data-container">
+              {addingData ? (
+                <div className="add-data-form">
+                  <h3>Add Weight Data</h3>
+                  {addError && <div className="error-message">{addError}</div>}
+                  <div className="form-group">
+                    <label htmlFor="new-date">Date:</label>
+                    <input
+                      type="date"
+                      id="new-date"
+                      value={newDate}
+                      onChange={(e) => setNewDate(e.target.value)}
+                      max={formatDateForInput(new Date())}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="new-weight">Weight (kg):</label>
+                    <input
+                      type="number"
+                      id="new-weight"
+                      value={newWeight}
+                      onChange={(e) => setNewWeight(e.target.value)}
+                      step="0.1"
+                      min="0"
+                      max="500"
+                      placeholder="Enter weight in kg"
+                    />
+                  </div>
+                  <div className="form-buttons">
+                    <button onClick={addOrUpdateDataPoint}>Save</button>
+                    <button
+                      onClick={() => {
+                        setAddingData(false);
+                        setAddError(null);
+                        setNewWeight("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className="add-data-button"
+                  onClick={() => {
+                    setNewDate(formatDateForInput(new Date()));
+                    setAddingData(true);
+                  }}
+                >
+                  Add Weight Data
+                </button>
+              )}
+            </div>
           </div>
-          <button
-            className="reset-button"
-            onClick={resetDateRange}
-            disabled={!startDate && !endDate}
-          >
-            Show all
-          </button>
-          <div className="add-data-container">
-            {addingData ? (
-              <div className="add-data-form">
-                <h3>Add Weight Data</h3>
-                {addError && <div className="error-message">{addError}</div>}
-                <div className="form-group">
-                  <label htmlFor="new-date">Date:</label>
-                  <input
-                    type="date"
-                    id="new-date"
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    max={formatDateForInput(new Date())}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="new-weight">Weight (kg):</label>
-                  <input
-                    type="number"
-                    id="new-weight"
-                    value={newWeight}
-                    onChange={(e) => setNewWeight(e.target.value)}
-                    step="0.1"
-                    min="0"
-                    max="500"
-                    placeholder="Enter weight in kg"
-                  />
-                </div>
-                <div className="form-buttons">
-                  <button onClick={addOrUpdateDataPoint}>Save</button>
-                  <button
-                    onClick={() => {
-                      setAddingData(false);
-                      setAddError(null);
-                      setNewWeight("");
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                className="add-data-button"
-                onClick={() => {
-                  setNewDate(formatDateForInput(new Date()));
-                  setAddingData(true);
-                }}
-              >
-                Add Weight Data
-              </button>
-            )}
-          </div>
-        </div>
+        )}
 
         {filteredData.length === 0 ? (
           <div className="message">
