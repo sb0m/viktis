@@ -9,8 +9,8 @@ const manifestForPlugIn = {
   scope: "/viktis/",
   start_url: "/viktis/",
   orientation: "landscape",
-  background_color: "#A3BE8C",
-  theme_color: "#EBCB8B",
+  background_color: "#006989",
+  theme_color: "#006989",
   icons: [
     {
       src: "/viktis/icons/viktis-icon-192.png",

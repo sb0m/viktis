@@ -17,7 +17,7 @@ body {
   padding: 1rem 0.5rem;
   margin: 0 auto;
   text-align: center;
-  color: red;
+  color: var(--text-color);
   height: -webkit-fill-available;
   width: -webkit-fill-available;
 }
