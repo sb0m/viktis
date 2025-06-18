@@ -4,20 +4,75 @@ body {
   height: 100vh;
   padding: 0;
 
-  --bg-color: #a3be8c;
-  --text-color-dark: #ebcb8b;
-  --text-color: #f6ebd4;
-  --highlight-color: #d87f32;
+  --app-bg-color: #006989;
+  --bg-color: #d9fff5;
+  --text-color-dark: #7a918d;
+  --text-color: #2f3130;
+  --highlight-color: #fcb97d;
   --error-color: #c44141;
 }
 
-.settings-button {
-  background: transparent;
-  border: none;
-  cursor: pointer;
+#root {
+  background-color: var(--app-bg-color);
+  padding: 1rem 0.5rem;
+  margin: 0 auto;
+  text-align: center;
+  color: red;
+  height: -webkit-fill-available;
+  width: -webkit-fill-available;
+}
+
+.chart-container {
+  margin: 0 auto;
+  background-color: var(--bg-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  .date-inputs {
+    display: flex;
+  }
+
+  .chart-wrapper {
+    width: 100%;
+    height: 80vh;
+
+    canvas {
+      width: 95% !important;
+      margin: auto;
+    }
+  }
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.message {
+  text-align: center;
+  padding: 1rem;
+  margin: 1rem auto;
+  max-width: 600px;
+  background-color: var(--bg-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  color: var(--text-color);
+}
+
+.error {
+  background-color: var(--error-color);
+  color: white;
+  border-left: 5px solid var(--highlight-color);
 }
 
 .settings {
+  width: 100%;
+  display: flex;
+  padding: 0 0 0.5rem 0;
+  gap: 0.5rem;
+  justify-content: flex-start;
+
   .chart-interval {
     display: flex;
     align-items: center;
@@ -25,13 +80,160 @@ body {
   }
 
   .add-data {
+    width: 100%;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    justify-content: center;
+    flex-direction: column;
 
     .form {
       display: flex;
+      flex-direction: column;
+
+      .inputs {
+        display: flex;
+        width: 100%;
+
+        input {
+          display: flex;
+        }
+
+        button {
+          display: flex;
+        }
+      }
     }
   }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-bg-color);
+  background-color: var(--bg-color);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.8rem 1rem;
+  border-radius: 6px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: hidden;
+  height: fit-content;
+  width: fit-content;
+}
+
+.btn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background-color: var(--highlight-color);
+}
+
+.btn:hover::after {
+  transform: scaleX(1);
+}
+
+/* Remove all transitions from active state for immediate feedback */
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: none; /* Remove box shadow when button is clicked */
+}
+
+/* Add transition only for returning to normal state */
+.btn:not(:active) {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn:disabled::after {
+  opacity: 0.4;
+}
+
+.input-field {
+  display: block;
+  width: 100%;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  height: auto;
+  display: block;
+  flex: 1;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--app-bg-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(0, 105, 137, 0.2);
+}
+
+.input-field::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background-color: var(--highlight-color);
+  transform: scaleX(0);
+  transition: transform 0.2s;
+}
+
+.input-field:focus::after {
+  transform: scaleX(1);
+}
+
+.input-field:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Specific styling for different input types */
+input[type="text"].input-field,
+input[type="number"].input-field,
+input[type="date"].input-field,
+input[type="email"].input-field,
+input[type="password"].input-field,
+textarea.input-field,
+select.input-field {
+  appearance: none;
+}
+
+/* For number inputs, hide the spinner buttons */
+input[type="number"].input-field::-webkit-inner-spin-button,
+input[type="number"].input-field::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For date inputs, customize the calendar icon */
+input[type="date"].input-field::-webkit-calendar-picker-indicator {
+  filter: opacity(0.6);
+}
+
+/* Error state */
+.input-field.error {
+  border-color: var(--error-color);
+}
+
+.input-field.error:focus {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(196, 65, 65, 0.2);
 }

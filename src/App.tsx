@@ -14,9 +14,8 @@ import {
   type Chart,
 } from "chart.js";
 import "chartjs-adapter-date-fns";
-import "./App.css";
 import zoomPlugin from "chartjs-plugin-zoom";
-import { VscFoldUp, VscFoldDown, VscExport } from "react-icons/vsc";
+import { VscAdd, VscClose, VscExport, VscSave } from "react-icons/vsc";
 import { saveAs } from "file-saver";
 
 ChartJS.register(
@@ -61,8 +60,6 @@ function App() {
 
   const [viewStartDate, setViewStartDate] = useState<number>(0);
   const [viewEndDate, setViewEndDate] = useState<number>(0);
-
-  const [visibleSettings, setVisibleSettings] = useState<boolean>(false);
 
   const localDataLoaded = useRef(false);
   const chartRef = useRef(null);
@@ -308,10 +305,10 @@ function App() {
             y: item.weight,
           })),
           fill: false,
-          backgroundColor: "#D87F32",
-          borderColor: "#EBCB8B",
-          tension: 0.1,
-          pointRadius: 5,
+          borderColor: "#AAD2BA",
+          backgroundColor: "#6B8F71",
+          tension: 0.4,
+          pointRadius: 3,
           pointHoverRadius: 8,
         },
       ],
@@ -361,8 +358,9 @@ function App() {
         ticks: {
           source: "auto",
           autoSkip: false,
-          maxRotation: 45,
-          minRotation: 45,
+          font: {
+            size: 10,
+          },
         },
       },
       y: {
@@ -371,6 +369,11 @@ function App() {
         },
         min: yAxisRange.min,
         max: yAxisRange.max,
+        ticks: {
+          font: {
+            size: 10,
+          },
+        },
       },
     },
     plugins: {
@@ -378,9 +381,8 @@ function App() {
         pan: {
           enabled: true,
           mode: "x",
-          threshold: 10, // Make it easier to start panning
+          threshold: 10,
           onPan: ({ chart }: { chart: Chart }) => {
-            // Update the view window when panning
             const xScale = chart.scales.x;
             setViewStartDate(xScale.min);
             setViewEndDate(xScale.max);
@@ -440,71 +442,65 @@ function App() {
 
   return (
     <>
-      <div className="chart-container">
-        <button
-          className="settings-button"
-          onClick={() => setVisibleSettings((prev) => !prev)}
-        >
-          {visibleSettings ? <VscFoldUp /> : <VscFoldDown />}
-        </button>
-        {visibleSettings && (
-          <div className="settings">
-            <div className="add-data">
-              {addingData ? (
-                <div className="form">
-                  {addError && <div className="error-message">{addError}</div>}
-                  <div className="form-group">
-                    <label htmlFor="new-date">Date:</label>
-                    <input
-                      type="date"
-                      id="new-date"
-                      value={newDate}
-                      onChange={(e) => setNewDate(e.target.value)}
-                      max={formatDateForInput(new Date())}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="new-weight">Weight (kg):</label>
-                    <input
-                      type="number"
-                      id="new-weight"
-                      value={newWeight}
-                      onChange={(e) => setNewWeight(e.target.value)}
-                      step="0.1"
-                      min="0"
-                      max="500"
-                      placeholder="Enter weight in kg"
-                    />
-                  </div>
-                  <button onClick={addOrUpdateDataPoint}>Save</button>
-                  <button
-                    onClick={() => {
-                      setAddingData(false);
-                      setAddError(null);
-                      setNewWeight("");
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
+      <div className="settings">
+        <div className="add-data">
+          {addingData ? (
+            <div className="form">
+              <div className="inputs">
+                <input
+                  className="input-field"
+                  type="date"
+                  id="new-date"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  max={formatDateForInput(new Date())}
+                />
+                <input
+                  className="input-field"
+                  type="number"
+                  id="new-weight"
+                  value={newWeight}
+                  onChange={(e) => setNewWeight(e.target.value)}
+                  step="0.1"
+                  min="0"
+                  max="500"
+                  placeholder="New weight / kg"
+                />
+                <button className="btn" onClick={addOrUpdateDataPoint}>
+                  <VscSave />
+                </button>
                 <button
-                  className="add-data-button"
+                  className="btn"
                   onClick={() => {
-                    setNewDate(formatDateForInput(new Date()));
-                    setAddingData(true);
+                    setAddingData(false);
+                    setAddError(null);
+                    setNewWeight("");
                   }}
                 >
-                  Add Weight Data
+                  <VscClose />
                 </button>
-              )}
+              </div>
+              {addError && <div className="error">{addError}</div>}
             </div>
-            <button onClick={exportData}>
-              <VscExport />
+          ) : (
+            <button
+              className="btn"
+              onClick={() => {
+                setNewDate(formatDateForInput(new Date()));
+                setAddingData(true);
+              }}
+            >
+              <VscAdd />
             </button>
-          </div>
+          )}
+        </div>
+        {!addingData && (
+          <button onClick={exportData} className="btn">
+            <VscExport />
+          </button>
         )}
-
+      </div>
+      <div className="chart-container">
         {filteredData.length === 0 ? (
           <div className="message">
             No data available for the selected date range.
