@@ -15,7 +15,13 @@ import {
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import zoomPlugin from "chartjs-plugin-zoom";
-import { VscAdd, VscClose, VscExport, VscSave } from "react-icons/vsc";
+import {
+  VscAdd,
+  VscArrowRight,
+  VscClose,
+  VscShare,
+  VscSave,
+} from "react-icons/vsc";
 import { saveAs } from "file-saver";
 
 ChartJS.register(
@@ -334,6 +340,34 @@ function App() {
     };
   };
 
+  // Add this function to your App component
+  const scrollToLatestDate = () => {
+    if (weightData.length === 0) return;
+
+    // Find the latest date in the data
+    const latestDate = new Date(
+      Math.max(...weightData.map((item) => item.date))
+    );
+
+    // Set the view window to show the latest 26 days (matching your current window size)
+    const endDate = latestDate.getTime();
+    const startDate = endDate - 25 * 24 * 60 * 60 * 1000;
+
+    setViewEndDate(endDate);
+    setViewStartDate(startDate);
+
+    // If you have a chart reference, you can also update the chart directly
+    if (chartRef.current) {
+      const chart = chartRef.current;
+      // @ts-expect-error huhu
+      chart.scales.x.min = startDate;
+      // @ts-expect-error huhu
+      chart.scales.x.max = endDate;
+      // @ts-expect-error huhu
+      chart.update();
+    }
+  };
+
   const yAxisRange = calculateYAxisRange();
 
   const chartOptions = {
@@ -443,7 +477,10 @@ function App() {
   return (
     <>
       <div className="settings">
-        <div className="add-data">
+        <div
+          className="add-data"
+          style={!addingData ? { alignItems: "flex-start" } : {}}
+        >
           {addingData ? (
             <div className="form">
               <div className="inputs">
@@ -483,20 +520,29 @@ function App() {
               {addError && <div className="error">{addError}</div>}
             </div>
           ) : (
-            <button
-              className="btn"
-              onClick={() => {
-                setNewDate(formatDateForInput(new Date()));
-                setAddingData(true);
-              }}
-            >
-              <VscAdd />
-            </button>
+            <div className="inputs">
+              <button
+                className="btn"
+                onClick={() => {
+                  setNewDate(formatDateForInput(new Date()));
+                  setAddingData(true);
+                }}
+              >
+                <VscAdd />
+              </button>
+              <button
+                onClick={scrollToLatestDate}
+                className="btn"
+                title="Scroll to latest data"
+              >
+                <VscArrowRight /> {/* Or use another appropriate icon */}
+              </button>
+            </div>
           )}
         </div>
         {!addingData && (
           <button onClick={exportData} className="btn">
-            <VscExport />
+            <VscShare />
           </button>
         )}
       </div>
