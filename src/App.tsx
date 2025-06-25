@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 import { Line } from "react-chartjs-2";
 import {
@@ -10,19 +11,12 @@ import {
   Tooltip,
   Legend,
   TimeScale,
-  type TooltipItem,
-  type Chart,
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import zoomPlugin from "chartjs-plugin-zoom";
-import {
-  VscAdd,
-  VscArrowRight,
-  VscClose,
-  VscShare,
-  VscSave,
-} from "react-icons/vsc";
-import { saveAs } from "file-saver";
+import { VscAdd, VscArrowRight, VscClose, VscSave } from "react-icons/vsc";
+import { fetchWeightData } from "./api";
+import { chartOptions } from "./chartConfig";
 
 ChartJS.register(
   CategoryScale,
@@ -41,17 +35,12 @@ interface WeightData {
   weight: number;
 }
 
-interface DataResponse {
-  weights: WeightData[];
-}
-
 function App() {
   const formatDateForInput = (date: Date): string => {
     return date.toISOString().split("T")[0];
   };
-
   const [weightData, setWeightData] = useState<WeightData[]>([]);
-  const [filteredData, setFilteredData] = useState<WeightData[]>([]);
+  const [chartData, setChartData] = useState<WeightData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [minDate, setMinDate] = useState<string>("");
@@ -67,163 +56,62 @@ function App() {
   const [viewStartDate, setViewStartDate] = useState<number>(0);
   const [viewEndDate, setViewEndDate] = useState<number>(0);
 
-  const localDataLoaded = useRef(false);
   const chartRef = useRef(null);
 
-  const LOCAL_STORAGE_KEY = "viktis_user_data";
-
   const initializeViewWindow = (data: WeightData[], endTimestamp: number) => {
-    console.log("Initializing view window data:", data);
     setViewEndDate(endTimestamp);
 
     const startTimestamp = endTimestamp - 25 * 24 * 60 * 60 * 1000;
     setViewStartDate(startTimestamp);
   };
 
-  const mergeWeightData = (
-    baseData: WeightData[],
-    userData: WeightData[]
-  ): WeightData[] => {
-    const dataMap = new Map<number, WeightData>();
+  // const saveUserData = (userData: WeightData[]) => {
+  //   // save in google sheet
+  //   console.log("Saving user data:", userData);
+  // };
 
-    baseData.forEach((item) => {
-      const date = new Date(item.date);
-      date.setHours(0, 0, 0, 0);
-      dataMap.set(date.getTime(), { ...item, date: date.getTime() });
-    });
-    userData.forEach((item) => {
-      const date = new Date(item.date);
-      date.setHours(0, 0, 0, 0);
-      dataMap.set(date.getTime(), { ...item, date: date.getTime() });
-    });
-
-    return Array.from(dataMap.values());
-  };
-
-  const saveUserData = (userData: WeightData[]) => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(userData));
-      console.log("Saved user data to local storage:", userData);
-    } catch (err) {
-      console.error("Error saving user data to local storage:", err);
-      setAddError(
-        "Failed to save data to local storage. Your browser might have storage restrictions."
-      );
-    }
-  };
+  // const deleteUserData = (userData: WeightData) => {
+  //   // save in google sheet
+  //   console.log("Delete user data:", userData);
+  // };
 
   useEffect(() => {
-    const loadAndMergeUserData = (baseData: WeightData[]) => {
+    const loadData = async () => {
       try {
-        const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-        let userData: WeightData[] = [];
+        fetchWeightData().then((responseData: WeightData[]) => {
+          const sortedData = responseData.sort((a, b) => a.date - b.date);
 
-        if (storedData) {
-          userData = JSON.parse(storedData);
-          console.log("Loaded user data from local storage:", userData);
-        }
+          setWeightData(sortedData);
+          setChartData(sortedData);
 
-        const mergedData = mergeWeightData(baseData, userData);
+          if (sortedData.length > 0) {
+            const firstDate = new Date(sortedData[0].date);
+            const lastDataDate = new Date(
+              sortedData[sortedData.length - 1].date
+            );
+            const today = new Date();
+            today.setHours(12, 0, 0, 0);
+            const lastDate = today > lastDataDate ? today : lastDataDate;
 
-        const sortedData = mergedData.sort((a, b) => a.date - b.date);
+            const firstDateStr = formatDateForInput(firstDate);
+            const lastDateStr = formatDateForInput(lastDate);
 
-        setWeightData(sortedData);
-        setFilteredData(sortedData);
+            setMinDate(firstDateStr);
+            setMaxDate(lastDateStr);
 
-        if (sortedData.length > 0) {
-          const firstDate = new Date(sortedData[0].date);
-          const lastDataDate = new Date(sortedData[sortedData.length - 1].date);
-          const today = new Date();
-          today.setHours(12, 0, 0, 0);
-          const lastDate = today > lastDataDate ? today : lastDataDate;
-
-          const firstDateStr = formatDateForInput(firstDate);
-          const lastDateStr = formatDateForInput(lastDate);
-
-          setMinDate(firstDateStr);
-          setMaxDate(lastDateStr);
-
-          initializeViewWindow(sortedData, lastDate.getTime());
-        }
-
-        localDataLoaded.current = true;
+            initializeViewWindow(sortedData, lastDate.getTime());
+          }
+          setLoading(false);
+        });
       } catch (err) {
-        console.error("Error loading user data from local storage:", err);
-        const sortedData = [...baseData].sort((a, b) => a.date - b.date);
-        setWeightData(sortedData);
-        setFilteredData(sortedData);
-
-        if (sortedData.length > 0) {
-          const firstDate = new Date(sortedData[0].date);
-          const lastDate = new Date(sortedData[sortedData.length - 1].date);
-
-          setMinDate(formatDateForInput(firstDate));
-          setMaxDate(formatDateForInput(lastDate));
-        }
+        setError(
+          (err as { message: string })?.message || "Failed to load weight data"
+        );
       }
     };
 
-    const baseUrl = import.meta.env.BASE_URL || "/viktis/";
-
-    fetch(`${baseUrl}data.json`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch data: ${response.status} ${response.statusText}`
-          );
-        }
-        return response.json();
-      })
-      .then((data: DataResponse) => {
-        console.log("Data loaded successfully:", data);
-        if (!data.weights || !Array.isArray(data.weights)) {
-          throw new Error("Invalid data format: weights array not found");
-        }
-
-        const baseData = [...data.weights];
-        loadAndMergeUserData(baseData);
-
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching data:", err);
-        setError(`Failed to load weight data: ${err.message}`);
-        setLoading(false);
-      });
+    loadData();
   }, []);
-
-  const exportData = () => {
-    try {
-      const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-
-      if (!storedData) {
-        alert("No data found in local storage.");
-        return;
-      }
-
-      // Parse the stored data - this will be an array of WeightData objects
-      const userData: WeightData[] = JSON.parse(storedData);
-
-      // Format it to match the structure in public/data.json
-      const exportData = {
-        settings: [{ key: "goal" }],
-        version: 0,
-        weights: userData,
-      };
-
-      // Convert to JSON string with pretty formatting
-      const jsonString = JSON.stringify(exportData, null, 2);
-
-      // Create a blob and download it
-      const blob = new Blob([jsonString], { type: "application/json" });
-      saveAs(blob, "weight_data_export.json");
-
-      console.log("Data exported successfully");
-    } catch (error) {
-      console.error("Error exporting data:", error);
-      alert("Failed to export data. See console for details.");
-    }
-  };
 
   const addOrUpdateDataPoint = () => {
     setAddError(null);
@@ -243,29 +131,12 @@ function App() {
       const dateValue = new Date(newDate);
       dateValue.setHours(12, 0, 0, 0);
 
-      const newDataPoint: WeightData = {
-        date: dateValue.getTime(),
-        weight: weightValue,
-      };
+      // const newDataPoint: WeightData = {
+      //   date: dateValue.getTime(),
+      //   weight: weightValue,
+      // };
 
-      const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-      const userData: WeightData[] = storedData ? JSON.parse(storedData) : [];
-
-      const existingIndex = userData.findIndex((item) => {
-        const itemDate = new Date(item.date);
-        return itemDate.toDateString() === dateValue.toDateString();
-      });
-
-      if (existingIndex >= 0) {
-        userData[existingIndex] = newDataPoint;
-      } else {
-        userData.push(newDataPoint);
-      }
-
-      saveUserData(userData);
-
-      const mergedData = mergeWeightData(weightData, userData);
-      const sortedData = mergedData.sort((a, b) => a.date - b.date);
+      const sortedData = weightData.sort((a, b) => a.date - b.date);
 
       setWeightData(sortedData);
 
@@ -289,7 +160,7 @@ function App() {
         setMaxDate(todayStr);
       }
 
-      setFilteredData(sortedData);
+      setChartData(sortedData);
 
       setNewWeight("");
       setAddingData(false);
@@ -299,14 +170,17 @@ function App() {
     }
   };
 
-  const createTimeScaleDataset = () => {
-    if (filteredData.length === 0) return null;
+  const createChartDataset = () => {
+    if (chartData.length === 0)
+      return {
+        datasets: [],
+      };
 
     return {
       datasets: [
         {
           label: "Weight (kg)",
-          data: filteredData.map((item) => ({
+          data: chartData.map((item) => ({
             x: item.date,
             y: item.weight,
           })),
@@ -321,42 +195,21 @@ function App() {
     };
   };
 
-  const chartData = createTimeScaleDataset();
+  const chartDataSet = createChartDataset();
 
-  const calculateYAxisRange = () => {
-    if (filteredData.length === 0) {
-      return { min: undefined, max: undefined };
-    }
-
-    const weights = filteredData.map((item) => item.weight);
-    const minWeight = Math.min(...weights);
-    const maxWeight = Math.max(...weights);
-    const range = maxWeight - minWeight;
-    const padding = Math.max(0.5, range * 0.1);
-
-    return {
-      min: Math.floor(minWeight - padding),
-      max: Math.ceil(maxWeight + padding),
-    };
-  };
-
-  // Add this function to your App component
   const scrollToLatestDate = () => {
     if (weightData.length === 0) return;
 
-    // Find the latest date in the data
     const latestDate = new Date(
       Math.max(...weightData.map((item) => item.date))
     );
 
-    // Set the view window to show the latest 26 days (matching your current window size)
     const endDate = latestDate.getTime();
     const startDate = endDate - 25 * 24 * 60 * 60 * 1000;
 
     setViewEndDate(endDate);
     setViewStartDate(startDate);
 
-    // If you have a chart reference, you can also update the chart directly
     if (chartRef.current) {
       const chart = chartRef.current;
       // @ts-expect-error huhu
@@ -366,94 +219,6 @@ function App() {
       // @ts-expect-error huhu
       chart.update();
     }
-  };
-
-  const yAxisRange = calculateYAxisRange();
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: {
-        type: "time" as const,
-        time: {
-          unit: "day" as const,
-          displayFormats: {
-            day: "dd.MM.yy",
-          },
-          tooltipFormat: "dd.MM.yy",
-          stepSize: 1, // One tick per day
-        },
-        title: {
-          display: false,
-        },
-        min: viewStartDate || undefined,
-        max: viewEndDate || undefined,
-        ticks: {
-          source: "auto",
-          autoSkip: false,
-          font: {
-            size: 10,
-          },
-        },
-      },
-      y: {
-        title: {
-          display: false,
-        },
-        min: yAxisRange.min,
-        max: yAxisRange.max,
-        ticks: {
-          font: {
-            size: 10,
-          },
-        },
-      },
-    },
-    plugins: {
-      zoom: {
-        pan: {
-          enabled: true,
-          mode: "x",
-          threshold: 10,
-          onPan: ({ chart }: { chart: Chart }) => {
-            const xScale = chart.scales.x;
-            setViewStartDate(xScale.min);
-            setViewEndDate(xScale.max);
-          },
-        },
-        limits: {
-          x: {
-            minRange: 26 * 24 * 60 * 60 * 1000,
-            maxRange: 26 * 24 * 60 * 60 * 1000,
-            min: new Date(minDate).getTime(),
-            max: new Date(maxDate).getTime() + 24 * 60 * 60 * 1000,
-          },
-        },
-        zoom: {
-          wheel: {
-            enabled: false, // Disable wheel zoom
-          },
-          pinch: {
-            enabled: false, // Disable pinch zoom
-          },
-          mode: "x",
-        },
-      },
-      tooltip: {
-        callbacks: {
-          title: (context: TooltipItem<"line">[]) => {
-            const timestamp = context[0].parsed.x;
-            return new Date(timestamp).toLocaleDateString(undefined, {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              timeZone: "UTC",
-            });
-          },
-        },
-      },
-    },
   };
 
   if (loading) {
@@ -540,22 +305,30 @@ function App() {
             </div>
           )}
         </div>
-        {!addingData && (
-          <button onClick={exportData} className="btn">
-            <VscShare />
-          </button>
-        )}
       </div>
       <div className="chart-container">
-        {filteredData.length === 0 ? (
+        {chartData.length === 0 ? (
           <div className="message">
             No data available for the selected date range.
           </div>
         ) : (
           <div className="chart-wrapper">
             {chartData && (
-              // @ts-expect-error huhu
-              <Line data={chartData} options={chartOptions} ref={chartRef} />
+              <Line
+                data={chartDataSet}
+                options={
+                  chartOptions(
+                    chartData,
+                    viewStartDate,
+                    viewEndDate,
+                    setViewStartDate,
+                    setViewEndDate,
+                    minDate,
+                    maxDate
+                  ) as any
+                }
+                ref={chartRef}
+              />
             )}
           </div>
         )}
