@@ -1,20 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef, useState } from "react";
-import { Line } from "react-chartjs-2";
 import {
-  Chart as ChartJS,
   CategoryScale,
+  Chart as ChartJS,
+  Legend,
   LinearScale,
-  PointElement,
   LineElement,
+  PointElement,
+  TimeScale,
   Title,
   Tooltip,
-  Legend,
-  TimeScale,
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import zoomPlugin from "chartjs-plugin-zoom";
-import { VscAdd, VscArrowRight, VscClose, VscSave } from "react-icons/vsc";
+import { useEffect, useRef, useState } from "react";
+import { Line } from "react-chartjs-2";
+import { VscArrowRight, VscSave } from "react-icons/vsc";
 import { fetchWeightData } from "./api";
 import { chartOptions } from "./chartConfig";
 
@@ -45,20 +45,17 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [minDate, setMinDate] = useState<string>("");
   const [maxDate, setMaxDate] = useState<string>("");
-
   const [newDate, setNewDate] = useState<string>(
     formatDateForInput(new Date())
   );
   const [newWeight, setNewWeight] = useState<string>("");
-  const [addingData, setAddingData] = useState<boolean>(false);
   const [addError, setAddError] = useState<string | null>(null);
-
   const [viewStartDate, setViewStartDate] = useState<number>(0);
   const [viewEndDate, setViewEndDate] = useState<number>(0);
 
   const chartRef = useRef(null);
 
-  const initializeViewWindow = (data: WeightData[], endTimestamp: number) => {
+  const initializeViewWindow = (endTimestamp: number) => {
     setViewEndDate(endTimestamp);
 
     const startTimestamp = endTimestamp - 25 * 24 * 60 * 60 * 1000;
@@ -99,7 +96,7 @@ function App() {
             setMinDate(firstDateStr);
             setMaxDate(lastDateStr);
 
-            initializeViewWindow(sortedData, lastDate.getTime());
+            initializeViewWindow(lastDate.getTime());
           }
           setLoading(false);
         });
@@ -161,9 +158,7 @@ function App() {
       }
 
       setChartData(sortedData);
-
       setNewWeight("");
-      setAddingData(false);
     } catch (err) {
       console.error("Error adding data point:", err);
       setAddError("Failed to add data point. Please try again.");
@@ -242,69 +237,43 @@ function App() {
   return (
     <>
       <div className="settings">
-        <div
-          className="add-data"
-          style={!addingData ? { alignItems: "flex-start" } : {}}
-        >
-          {addingData ? (
-            <div className="form">
-              <div className="inputs">
-                <input
-                  className="input-field"
-                  type="date"
-                  id="new-date"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  max={formatDateForInput(new Date())}
-                />
-                <input
-                  className="input-field"
-                  type="number"
-                  id="new-weight"
-                  value={newWeight}
-                  onChange={(e) => setNewWeight(e.target.value)}
-                  step="0.1"
-                  min="0"
-                  max="500"
-                  placeholder="New weight / kg"
-                />
-                <button className="btn" onClick={addOrUpdateDataPoint}>
-                  <VscSave />
-                </button>
-                <button
-                  className="btn"
-                  onClick={() => {
-                    setAddingData(false);
-                    setAddError(null);
-                    setNewWeight("");
-                  }}
-                >
-                  <VscClose />
-                </button>
-              </div>
-              {addError && <div className="error">{addError}</div>}
-            </div>
-          ) : (
-            <div className="inputs">
-              <button
-                className="btn"
-                onClick={() => {
-                  setNewDate(formatDateForInput(new Date()));
-                  setAddingData(true);
-                }}
-              >
-                <VscAdd />
-              </button>
-              <button
-                onClick={scrollToLatestDate}
-                className="btn"
-                title="Scroll to latest data"
-              >
-                <VscArrowRight /> {/* Or use another appropriate icon */}
-              </button>
-            </div>
-          )}
+        <div className="form">
+          <input
+            className="input-field"
+            type="date"
+            id="new-date"
+            value={newDate}
+            onChange={(e) => setNewDate(e.target.value)}
+            max={formatDateForInput(new Date())}
+          />
+          <input
+            className="input-field"
+            type="number"
+            id="new-weight"
+            value={newWeight}
+            onChange={(e) => setNewWeight(e.target.value)}
+            step="0.1"
+            min="0"
+            max="500"
+            placeholder="weight / kg"
+            autoFocus
+          />
+          <button
+            className="btn"
+            onClick={addOrUpdateDataPoint}
+            disabled={!newWeight}
+          >
+            <VscSave />
+          </button>
+          <button
+            onClick={scrollToLatestDate}
+            className="btn"
+            title="Scroll to latest data"
+          >
+            <VscArrowRight /> {/* Or use another appropriate icon */}
+          </button>
         </div>
+        {addError && <div className="error">{addError}</div>}
       </div>
       <div className="chart-container">
         {chartData.length === 0 ? (
