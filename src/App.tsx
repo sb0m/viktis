@@ -15,7 +15,7 @@ import zoomPlugin from "chartjs-plugin-zoom";
 import { useEffect, useRef, useState } from "react";
 import { Line } from "react-chartjs-2";
 import { VscArrowRight, VscSave } from "react-icons/vsc";
-import { fetchWeightData } from "./api";
+import { fetchWeightData, saveWeightData, updateWeightData } from "./api";
 import { chartOptions } from "./chartConfig";
 
 ChartJS.register(
@@ -110,7 +110,7 @@ function App() {
     loadData();
   }, []);
 
-  const addOrUpdateDataPoint = () => {
+  const addOrUpdateDataPoint = async () => {
     setAddError(null);
 
     if (!newDate || !newWeight) {
@@ -127,41 +127,39 @@ function App() {
     try {
       const dateValue = new Date(newDate);
       dateValue.setHours(12, 0, 0, 0);
+      const dateTimestamp = dateValue.getTime();
 
-      // const newDataPoint: WeightData = {
-      //   date: dateValue.getTime(),
-      //   weight: weightValue,
-      // };
+      // Check if this data point already exists (date is the same)
+      const existingDataPointIndex = weightData.findIndex((item) => {
+        const existingDate = new Date(item.date);
+        existingDate.setHours(12, 0, 0, 0);
+        return existingDate.getTime() === dateTimestamp;
+      });
 
-      const sortedData = weightData.sort((a, b) => a.date - b.date);
-
-      setWeightData(sortedData);
-
-      const today = new Date();
-      today.setHours(12, 0, 0, 0);
-      const todayStr = formatDateForInput(today);
-
-      if (sortedData.length > 0) {
-        const firstDate = new Date(sortedData[0].date);
-
-        const lastDataDate = new Date(sortedData[sortedData.length - 1].date);
-        const lastDate = today > lastDataDate ? today : lastDataDate;
-
-        const firstDateStr = formatDateForInput(firstDate);
-        const lastDateStr = formatDateForInput(lastDate);
-
-        setMinDate(firstDateStr);
-        setMaxDate(lastDateStr);
+      if (existingDataPointIndex === -1) {
+        // Data point doesn't exist, save new weight data
+        await saveWeightData(dateValue, weightValue);
+        console.log("New data point saved successfully!");
       } else {
-        setMinDate(todayStr);
-        setMaxDate(todayStr);
+        // Data point exists, find out which row number and update weight data
+        await updateWeightData(existingDataPointIndex, dateValue, weightValue);
+        console.log(
+          `Data point updated successfully at row ${
+            existingDataPointIndex + 2
+          }!`
+        );
       }
 
+      // Refresh data from server to get the latest state
+      const updatedData = await fetchWeightData();
+      const sortedData = updatedData.sort((a, b) => a.date - b.date);
+      setWeightData(sortedData);
       setChartData(sortedData);
+
       setNewWeight("");
     } catch (err) {
-      console.error("Error adding data point:", err);
-      setAddError("Failed to add data point. Please try again.");
+      console.error("Error adding/updating data point:", err);
+      setAddError("Failed to save data point. Please try again.");
     }
   };
 
@@ -261,7 +259,7 @@ function App() {
           <button
             className="btn"
             onClick={addOrUpdateDataPoint}
-            disabled={!newWeight}
+            disabled={!newWeight || !newDate}
           >
             <VscSave />
           </button>
