@@ -1,28 +1,28 @@
-import { useEffect, useRef, useState } from "react";
-import { Line } from "react-chartjs-2";
 import {
-  Chart as ChartJS,
   CategoryScale,
+  Chart as ChartJS,
+  Legend,
   LinearScale,
-  PointElement,
   LineElement,
+  PointElement,
+  TimeScale,
   Title,
   Tooltip,
-  Legend,
-  TimeScale,
-  type TooltipItem,
   type Chart,
+  type TooltipItem,
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import zoomPlugin from "chartjs-plugin-zoom";
+import { saveAs } from "file-saver";
+import { useEffect, useRef, useState } from "react";
+import { Line } from "react-chartjs-2";
 import {
   VscAdd,
   VscArrowRight,
   VscClose,
-  VscShare,
   VscSave,
+  VscShare,
 } from "react-icons/vsc";
-import { saveAs } from "file-saver";
 import { fetchWeightData } from "../api";
 
 ChartJS.register(
@@ -455,7 +455,7 @@ function App() {
         callbacks: {
           title: (context: TooltipItem<"line">[]) => {
             const timestamp = context[0].parsed.x;
-            return new Date(timestamp).toLocaleDateString(undefined, {
+            return new Date(timestamp ?? 0).toLocaleDateString(undefined, {
               year: "numeric",
               month: "short",
               day: "numeric",

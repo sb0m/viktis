@@ -101,7 +101,7 @@ export const chartOptions = (
         callbacks: {
           title: (context: TooltipItem<"line">[]) => {
             const timestamp = context[0].parsed.x;
-            return new Date(timestamp).toLocaleDateString(undefined, {
+            return new Date(timestamp ?? 0).toLocaleDateString(undefined, {
               year: "numeric",
               month: "short",
               day: "numeric",
