@@ -16,34 +16,28 @@ export interface WeightData {
   weight: number;
 }
 
-const ACCESS_TOKEN =
-  "1aa199c4f2bafb5b5129578db327068acaa209bc92c4114d9884c8c2c233486b";
-const APICO_BASE_URL = "https://api.apico.dev/v1/O26sb8";
-const SHEET_ID = "1YtPNls1h0TxhQPUMdmMHIoKOoDZI7mB5-BsLeXVyQsM";
-const SHEET_NAME = "erik";
-
-// https://api.apico.dev/v1/O26sb8/1YtPNls1h0TxhQPUMdmMHIoKOoDZI7mB5-BsLeXVyQsM/values/erik
-const API_GET_ENDPOINT = `${APICO_BASE_URL}/${SHEET_ID}/values/${SHEET_NAME}`;
-// https://api.apico.dev/v1/O26sb8/{spreadsheetId}/values/{SheetName}:append
-const API_POST_ENDPOINT = `${APICO_BASE_URL}/${SHEET_ID}/values/${SHEET_NAME}:append`;
-// https://api.apico.dev/v1/O26sb8/{spreadsheetId}/values/{SheetName!range}
-const API_PUT_ENDPOINT = `${APICO_BASE_URL}/${SHEET_ID}/values/${SHEET_NAME}!`;
+// Google Apps Script Web App URL
+const GOOGLE_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbw4qVhqYSw_J3_zfk3rZQtgw3z2hwPvT3W_gBz3gM6s4WnNPIP5UAf66tSMoQ1DJxm8gA/exec";
 
 export async function fetchWeightData(): Promise<WeightData[]> {
   try {
-    const response = await axios.get<ApicoResponse>(API_GET_ENDPOINT);
+    const response = await axios.get<ApicoResponse>(
+      `${GOOGLE_SCRIPT_URL}?action=getData`
+    );
 
-    const weightData: WeightData[] = response.data.values
-      .slice(1)
-      .map((row: string[]) => {
-        const dateObj = new Date(row[0]);
-        dateObj.setHours(12, 0, 0, 0);
+    console.log("Raw API Response:", response.data);
 
-        return {
-          date: dateObj.getTime(),
-          weight: parseFloat(row[1]),
-        };
-      });
+    const values = response.data.values || response.data;
+    const weightData: WeightData[] = values.slice(1).map((row: string[]) => {
+      const dateObj = new Date(row[0]);
+      dateObj.setHours(12, 0, 0, 0);
+
+      return {
+        date: dateObj.getTime(),
+        weight: parseFloat(row[1]),
+      };
+    });
     console.log("API Response weightData:", weightData);
     return weightData;
   } catch (error) {
@@ -59,19 +53,8 @@ export async function saveWeightData(
   try {
     const formattedDate = date.toISOString().split("T")[0];
 
-    const payload = {
-      values: [[formattedDate, weight.toString()]],
-      majorDimension: "ROWS",
-    };
-
-    const response = await axios.post(
-      `${API_POST_ENDPOINT}?valueInputOption=USER_ENTERED`,
-      payload,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
+    const response = await axios.get(
+      `${GOOGLE_SCRIPT_URL}?action=addData&date=${formattedDate}&weight=${weight}`
     );
 
     console.log("Data saved successfully:", response.data);
@@ -89,22 +72,10 @@ export async function updateWeightData(
   try {
     const formattedDate = date.toISOString().split("T")[0];
 
-    const payload = {
-      values: [[formattedDate, weight.toString()]],
-      majorDimension: "ROWS",
-    };
-
-    const response = await axios.put(
-      `${API_PUT_ENDPOINT}A${index + 2}:B${
+    const response = await axios.get(
+      `${GOOGLE_SCRIPT_URL}?action=updateData&row=${
         index + 2
-      }?valueInputOption=USER_ENTERED`,
-      payload,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${ACCESS_TOKEN}`,
-        },
-      }
+      }&date=${formattedDate}&weight=${weight}`
     );
 
     console.log("Data updated successfully:", response.data);
